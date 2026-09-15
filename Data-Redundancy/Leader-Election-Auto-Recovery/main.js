@@ -13,13 +13,24 @@ const path = require('path');
 const readline = require('readline');
 const { Worker } = require('worker_threads');
 const config = require('./lib/config');
-const { SUPERVISOR, BROADCAST, TYPES, ROLES, message } = require('./lib/messages');
+const {
+  SUPERVISOR,
+  BROADCAST,
+  TYPES,
+  ROLES,
+  message,
+} = require('./lib/messages');
 const { createLogger } = require('./lib/logger');
 
 const T0 = Date.now();
-const log = createLogger(() => ({ t0: T0, tag: 'supervisor', role: 'SUPERVISOR', epoch: '-' }));
+const log = createLogger(() => ({
+  t0: T0,
+  tag: 'supervisor',
+  role: 'SUPERVISOR',
+  epoch: '-',
+}));
 
-const ROSTER = Array.from({ length: config.NODE_COUNT }, (_, i) => i + 1);
+const ROSTER = Array.from({ length: config.NODE_COUNT || 3 }, (_, i) => i + 1);
 const nodes = new Map(); // id -> record
 
 let shuttingDown = false;
@@ -45,7 +56,7 @@ function spawnNode(id) {
   worker.on('exit', (code) => onNodeExit(id, code));
 
   worker.postMessage(
-    message(SUPERVISOR, id, TYPES.INIT, { nodeId: id, roster: ROSTER, t0: T0 })
+    message(SUPERVISOR, id, TYPES.INIT, { nodeId: id, roster: ROSTER, t0: T0 }),
   );
 
   log(`spawned node ${id}`);
@@ -59,9 +70,8 @@ function route(msg) {
   const sender = nodes.get(msg.from);
   if (sender && sender.partitioned) return;
 
-  const targets = msg.to === BROADCAST
-    ? ROSTER.filter((id) => id !== msg.from)
-    : [msg.to];
+  const targets =
+    msg.to === BROADCAST ? ROSTER.filter((id) => id !== msg.from) : [msg.to];
 
   for (const id of targets) {
     const target = nodes.get(id);
@@ -138,16 +148,24 @@ function printStatus() {
   const rows = ROSTER.map((id) => {
     const r = nodes.get(id);
     if (!r) return `  ${String(id).padEnd(4)} ${'(missing)'.padEnd(12)}`;
-    const state = !r.alive ? 'DOWN' : r.partitioned ? `${r.role} (cut off)` : r.role;
+    const state = !r.alive
+      ? 'DOWN'
+      : r.partitioned
+        ? `${r.role} (cut off)`
+        : r.role;
     const leader = r.leaderId === null ? '-' : String(r.leaderId);
     return `  ${String(id).padEnd(4)} ${state.padEnd(20)} ${String(r.epoch).padEnd(7)} ${leader}`;
   });
 
   console.log('');
-  console.log(`  ${'ID'.padEnd(4)} ${'ROLE'.padEnd(20)} ${'EPOCH'.padEnd(7)} BELIEVES LEADER IS`);
+  console.log(
+    `  ${'ID'.padEnd(4)} ${'ROLE'.padEnd(20)} ${'EPOCH'.padEnd(7)} BELIEVES LEADER IS`,
+  );
   console.log(`  ${'-'.repeat(58)}`);
   rows.forEach((row) => console.log(row));
-  console.log(`  auto-respawn: ${autoRespawn ? 'on' : 'off'}   leader: ${currentLeaderId() ?? 'none'}`);
+  console.log(
+    `  auto-respawn: ${autoRespawn ? 'on' : 'off'}   leader: ${currentLeaderId() ?? 'none'}`,
+  );
   console.log('');
 }
 
@@ -200,12 +218,20 @@ function shutdown() {
 /* --------------------------------- startup -------------------------------- */
 
 log(`starting ${config.NODE_COUNT} nodes`);
-log(`heartbeat ${config.HEARTBEAT_INTERVAL}ms, election timeout ${config.ELECTION_TIMEOUT}ms (+jitter), respawn delay ${config.RESPAWN_DELAY}ms`);
-log('commands: status | kill <id> | kill leader | pause <id> [ms] | resume <id> | respawn on|off | quit');
+log(
+  `heartbeat ${config.HEARTBEAT_INTERVAL}ms, election timeout ${config.ELECTION_TIMEOUT}ms (+jitter), respawn delay ${config.RESPAWN_DELAY}ms`,
+);
+log(
+  'commands: status | kill <id> | kill leader | pause <id> [ms] | resume <id> | respawn on|off | quit',
+);
 
 ROSTER.forEach(spawnNode);
 
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: '' });
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+  prompt: '',
+});
 rl.on('line', handleCommand);
 rl.on('SIGINT', shutdown);
 process.on('SIGINT', shutdown);
