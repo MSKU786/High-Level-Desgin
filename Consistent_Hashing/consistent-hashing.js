@@ -22,29 +22,29 @@ class ConsistentHash {
 
   assignValue(key, value) {
     const hashvalue = hashKey(key);
-    const map = this.findServer(hashvalue);
-    map.set(hashKey, value);
+    const node = this.findServer(hashvalue);
+    node.map.set(hashKey, value);
   }
 
   findServer(val) {
     for (let i of this.mapArray) {
       const { range, map } = i;
       if (val >= range[0] && val < range[1]) {
-        return map;
+        return i;
       }
     }
   }
 
   deleteValue(key) {
     const hashvalue = hashKey(key);
-    const map = this.findServer(hashvalue);
-    map.delete(hashvalue);
+    const node = this.findServer(hashvalue);
+    node.map.delete(hashvalue);
   }
 
   getValue(key) {
     const hashvalue = hashKey(key);
-    const map = this.findServer(hashvalue);
-    return map.get(hashvalue) || null;
+    const node = this.findServer(hashvalue);
+    return node.map.get(hashvalue) || null;
   }
 
   assignServer() {
