@@ -1,24 +1,15 @@
 const { createHash } = require('crypto');
 
-const RANGE_BITS = 20; // range is 0 .. 2^30 - 1
+const RANGE_BITS = 20;
+const RING_SIZE = 2 ** RANGE_BITS; // 1,048,576 — the ONLY definition of the space
 
-export function hashKey(key) {
-  const digest = createHash('md5').update(key).digest(); // 16 bytes
-  const n = digest.readUInt32BE(0); // take the first 4 bytes as an unsigned 32-bit int
-  return n >>> (32 - RANGE_BITS); // keep the top 30 bits
+// Maps any key onto a point in [0, RING_SIZE).
+// Truncating the top bits (rather than `% RING_SIZE`) keeps the distribution
+// unbiased, because RING_SIZE divides 2^32 exactly.
+function hashKey(key) {
+  const digest = createHash('md5').update(String(key)).digest();
+  const n = digest.readUInt32BE(0);
+  return n >>> (32 - RANGE_BITS);
 }
 
-export function distributeRange(start, end, n) {
-  if (n <= 1) {
-    return [[start, end]];
-  }
-
-  let gap = parseInt((end - start) / n);
-
-  let ranges = [];
-
-  for (let i = start; i < end; i += gap) {
-    ranges.push([i, i + gap]);
-  }
-  return ranges;
-}
+module.exports = { hashKey, RANGE_BITS, RING_SIZE };
