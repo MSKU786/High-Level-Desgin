@@ -1,4 +1,4 @@
-const { createHash } = require('crypto');
+ const { createHash } = require('crypto');
 
 const RANGE_BITS = 20;
 const RING_SIZE = 2 ** RANGE_BITS; // 1,048,576 — the ONLY definition of the space
