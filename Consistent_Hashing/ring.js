@@ -71,7 +71,9 @@ class ConsistentHashRing {
     const [node] = this.ring.splice(at, 1);
 
     // After the splice, index `at` IS the successor (wrapping if it was last).
-    const successor = this.ring.length ? this.ring[at % this.ring.length] : null;
+    const successor = this.ring.length
+      ? this.ring[at % this.ring.length]
+      : null;
     if (successor) {
       for (const [k, v] of node.store) successor.store.set(k, v);
       node.store.clear();
