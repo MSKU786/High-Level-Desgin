@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <title>Room Chat</title>
+    <style>
+      body {
+        max-width: 640px;
+        margin: 40px auto;
+        padding: 0 16px;
+        font: 16px sans-serif;
+      }
+      form {
+        display: flex;
+        gap: 8px;
+        margin: 12px 0;
+      }
+      input {
+        min-width: 0;
+        padding: 8px;
+      }
+      button {
+        padding: 8px 12px;
+      }
+      #join-form input {
+        flex: 1;
+      }
+      #message-form input {
+        flex: 1;
+      }
+      #messages {
+        min-height: 240px;
+        max-height: 55vh;
+        overflow-y: auto;
+        padding: 12px;
+        border: 1px solid #ccc;
+      }
+      #messages p {
+        margin: 6px 0;
+        overflow-wrap: anywhere;
+      }
+      #status {
+        color: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Room Chat</h1>
+    <form id="join-form">
+      <input
+        id="username"
+        placeholder="Your name"
+        maxlength="30"
+        required
+      />
+      <input
+        id="room"
+        placeholder="Room name"
+        maxlength="50"
+        required
+      />
+      <button type="submit">Join</button>
+    </form>
+    <p id="status">Choose a name and room to join.</p>
+    <section
+      id="chat"
+      hidden
+    >
+      <div
+        id="messages"
+        aria-live="polite"
+      ></div>
+      <form id="message-form">
+        <input
+          id="message"
+          placeholder="Write a message"
+          maxlength="1000"
+          autocomplete="off"
+          required
+        />
+        <button type="submit">Send</button>
+      </form>
+    </section>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+      const joinForm = document.querySelector('#join-form');
+      const messageForm = document.querySelector('#message-form');
+      const messageInput = document.querySelector('#message');
+      const messages = document.querySelector('#messages');
+      const status = document.querySelector('#status');
+
+      joinForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        socket.emit('join-room', {
+          username: document.querySelector('#username').value,
+          room: document.querySelector('#room').value,
+        });
+      });
+
+      socket.on('room-joined', ({ room, username }) => {
+        joinForm.hidden = true;
+        document.querySelector('#chat').hidden = false;
+        status.textContent = `Joined ${room} as ${username}`;
+        messageInput.focus();
+      });
+
+      messageForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        socket.emit('chat-message', messageInput.value);
+        messageInput.value = '';
+        messageInput.focus();
+      });
+
+      socket.on('chat-message', ({ username, message }) => {
+        const line = document.createElement('p');
+        const sender = document.createElement('strong');
+        sender.textContent = `${username}: `;
+        line.append(sender, document.createTextNode(message));
+        messages.append(line);
+        messages.scrollTop = messages.scrollHeight;
+      });
+    </script>
+  </body>
+</html>
